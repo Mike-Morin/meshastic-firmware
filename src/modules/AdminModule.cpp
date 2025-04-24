@@ -191,6 +191,22 @@ bool AdminModule::handleReceivedProtobuf(const meshtastic_MeshPacket &mp, meshta
     /**
      * Other
      */
+
+    case meshtastic_AdminMessage_erase_preshared_keys_tag: {
+        LOG_INFO("Client requesting to erase all pre-shared keys");
+        // Clear all PSKs from non-default channels
+        for (int i = 1; i < MAX_NUM_CHANNELS; i++) {
+            auto &ch = channels.getByIndex(i);
+            if (ch.settings.psk.size > 0) {
+                memset(ch.settings.psk.bytes, 0, ch.settings.psk.size);
+                ch.settings.psk.size = 0;
+                LOG_DEBUG("Erased PSK for channel %d", i);
+            }
+        }
+        channels.onConfigChanged(); // Notify radios about the change
+        saveChanges(SEGMENT_CHANNELS, false);
+        break;
+    }
     case meshtastic_AdminMessage_reboot_seconds_tag: {
         reboot(r->reboot_seconds);
         break;

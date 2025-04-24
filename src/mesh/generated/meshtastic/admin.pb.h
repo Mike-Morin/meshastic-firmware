@@ -318,6 +318,7 @@ extern "C" {
 #define meshtastic_AdminMessage_factory_reset_config_tag 99
 #define meshtastic_AdminMessage_nodedb_reset_tag 100
 #define meshtastic_AdminMessage_session_passkey_tag 101
+#define meshtastic_AdminMessage_erase_preshared_keys_tag 102
 
 /* Struct field encoding specification for nanopb */
 #define meshtastic_AdminMessage_FIELDLIST(X, a) \
