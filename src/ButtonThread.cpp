@@ -10,6 +10,8 @@
 #include "buzz.h"
 #include "main.h"
 #include "modules/ExternalNotificationModule.h"
+#include "modules/AdminModule.h"
+#include "Channels.h"
 #include "power.h"
 #include "sleep.h"
 #ifdef ARCH_PORTDUINO
@@ -114,6 +116,13 @@ ButtonThread::ButtonThread() : OSThread("Button")
 
     attachButtonInterrupts();
 #endif
+}
+
+void ButtonThread::reboot(int32_t seconds)
+{
+    LOG_INFO("Reboot in %d seconds", seconds);
+    screen->startAlert("Rebooting...");
+    rebootAtMsec = (seconds < 0) ? 0 : (millis() + seconds * 1000);
 }
 
 int32_t ButtonThread::runOnce()
@@ -239,6 +248,24 @@ int32_t ButtonThread::runOnce()
                         screen->forceDisplay(true); // Force a new UI frame, then force an EInk update
                 }
                 break;
+            // More than 3 clicks erases all PSKs
+            default:
+                if (multipressClickCount > 3) {
+                    LOG_INFO("Erasing PSKs");
+                    // Clear all PSKs from non-default channels
+                    for (int i = 1; i < MAX_NUM_CHANNELS; i++) {
+                        auto &ch = channels.getByIndex(i);
+                        if (ch.settings.psk.size > 0) {
+                            memset(ch.settings.psk.bytes, 0, ch.settings.psk.size);
+                            ch.settings.psk.size = 0;
+                            LOG_DEBUG("Erased PSK for channel %d", i);
+                        }
+            }
+            LOG_INFO("Save PSK removal to disk");
+            service->reloadConfig(SEGMENT_CHANNELS);
+            reboot(DEFAULT_REBOOT_SECONDS);
+            break;
+        }
 #elif defined(ELECROW_ThinkNode_M2)
             case 3:
                 LOG_INFO("3 clicks: toggle buzzer");
@@ -270,8 +297,8 @@ int32_t ButtonThread::runOnce()
                 break;
 #endif
             // No valid multipress action
-            default:
-                break;
+            //default:
+            //    break;
             } // end switch: click count
 
             break;
